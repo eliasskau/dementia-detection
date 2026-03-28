@@ -1,0 +1,6 @@
+opensmile
+librosa
+soundfile
+matplotlib
+pandas
+numpy
