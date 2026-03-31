@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+
+# Audio files
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# Large data/media folders
+Baycrest-PPA/0wav/
+Baycrest-PPA/0extra/
+Baycrest-PPA/Baycrest-PPA-transcripts/
+
+# CHAT transcript files
+*.cha
+
+# Output files
+*.csv
+*.png
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OpenSMILE build artifacts
+build/
+*.o
+*.aPitt/
+WLS/
+PItt-data.xlsx
+control_ids.txt
+.DS_Store
+.vscode/
+*.xlsx
+*.xls
+*.cdc
