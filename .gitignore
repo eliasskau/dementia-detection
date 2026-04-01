@@ -17,6 +17,7 @@ Baycrest-PPA/Baycrest-PPA-transcripts/
 
 # CHAT transcript files
 *.cha
+*.txt
 
 # Output files
 *.csv
