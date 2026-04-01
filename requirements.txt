@@ -4,3 +4,4 @@ soundfile
 matplotlib
 pandas
 numpy
+neosca
