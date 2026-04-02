@@ -18,10 +18,10 @@ Output
 
 CSV schema: stem, label, [88 eGeMAPS feature columns]
 
-Run with the .venv Python (opensmile lives there):
-    .venv/bin/python scripts/04_extract_acoustic_features.py
-    .venv/bin/python scripts/04_extract_acoustic_features.py --task cookie
-    .venv/bin/python scripts/04_extract_acoustic_features.py --force
+Run:
+    conda run -n dementia-detection python scripts/04_extract_acoustic_features.py
+    conda run -n dementia-detection python scripts/04_extract_acoustic_features.py --task cookie
+    conda run -n dementia-detection python scripts/04_extract_acoustic_features.py --force
 """
 
 import argparse

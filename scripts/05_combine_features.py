@@ -28,13 +28,12 @@ Notes
 - The merge key is (stem, label).  Rows present in only a subset of the
   source CSVs are kept (outer join) with NaN for missing features.
 - If a source CSV doesn't exist for a task it is silently skipped.
-- Run with .venv/bin/python (pandas lives there).
 
 Run
 ---
-    .venv/bin/python scripts/05_combine_features.py
-    .venv/bin/python scripts/05_combine_features.py --task cookie
-    .venv/bin/python scripts/05_combine_features.py --force
+    conda run -n dementia-detection python scripts/05_combine_features.py
+    conda run -n dementia-detection python scripts/05_combine_features.py --task cookie
+    conda run -n dementia-detection python scripts/05_combine_features.py --force
 """
 
 import argparse
