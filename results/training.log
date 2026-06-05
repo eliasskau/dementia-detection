@@ -1,0 +1,98 @@
+============================================================
+Dementia Detection — Model Training
+============================================================
+Tasks          : ['cookie', 'fluency', 'recall', 'sentence']
+Models         : ['logistic_regression', 'random_forest', 'xgboost']
+Feature groups : ['acoustic', 'syntactic', 'lexical', 'all']
+Combined dir   : /Users/eliasskau/University/UCG/YEAR3/dementia-detection/Pitt/processed/combined
+Output dir     : /Users/eliasskau/University/UCG/YEAR3/dementia-detection/results/models
+
+==============================================================
+Task: cookie
+==============================================================
+  Samples  : 552  {'Dementia': 309, 'Control': 243}
+  Subjects : {'Control': 99, 'Dementia': 194}
+  [logistic_regression   ] acoustic   ... CV-AUC=0.622+/-0.060  |  Test-AUC=0.501  Test-F1=0.509  Test-Acc=0.500
+  [logistic_regression   ] syntactic  ... CV-AUC=0.567+/-0.029  |  Test-AUC=0.532  Test-F1=0.582  Test-Acc=0.574
+  [logistic_regression   ] lexical    ... CV-AUC=0.762+/-0.064  |  Test-AUC=0.720  Test-F1=0.679  Test-Acc=0.676
+  [logistic_regression   ] all        ... CV-AUC=0.784+/-0.020  |  Test-AUC=0.610  Test-F1=0.586  Test-Acc=0.556
+  [random_forest         ] acoustic   ... CV-AUC=0.568+/-0.080  |  Test-AUC=0.552  Test-F1=0.599  Test-Acc=0.491
+  [random_forest         ] syntactic  ... CV-AUC=0.566+/-0.038  |  Test-AUC=0.588  Test-F1=0.641  Test-Acc=0.574
+  [random_forest         ] lexical    ... CV-AUC=0.766+/-0.039  |  Test-AUC=0.631  Test-F1=0.623  Test-Acc=0.574
+  [random_forest         ] all        ... CV-AUC=0.751+/-0.022  |  Test-AUC=0.611  Test-F1=0.612  Test-Acc=0.519
+  [xgboost               ] acoustic   ... CV-AUC=0.591+/-0.040  |  Test-AUC=0.545  Test-F1=0.583  Test-Acc=0.509
+  [xgboost               ] syntactic  ... CV-AUC=0.570+/-0.036  |  Test-AUC=0.557  Test-F1=0.602  Test-Acc=0.546
+  [xgboost               ] lexical    ... CV-AUC=0.777+/-0.043  |  Test-AUC=0.649  Test-F1=0.650  Test-Acc=0.611
+  [xgboost               ] all        ... CV-AUC=0.766+/-0.013  |  Test-AUC=0.638  Test-F1=0.647  Test-Acc=0.565
+
+==============================================================
+Task: fluency
+==============================================================
+  Samples  : 237  {'Dementia': 235, 'Control': 2}
+  Subjects : {'Control': 2, 'Dementia': 161}
+  [logistic_regression   ] acoustic   ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] syntactic  ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] lexical    ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] all        ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] acoustic   ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] syntactic  ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] lexical    ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] all        ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] acoustic   ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] syntactic  ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] lexical    ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] all        ... SKIP -- Only 2 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+
+==============================================================
+Task: recall
+==============================================================
+  Samples  : 263  {'Dementia': 262, 'Control': 1}
+  Subjects : {'Control': 1, 'Dementia': 176}
+  [logistic_regression   ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+
+==============================================================
+Task: sentence
+==============================================================
+  Samples  : 237  {'Dementia': 236, 'Control': 1}
+  Subjects : {'Control': 1, 'Dementia': 159}
+  [logistic_regression   ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [logistic_regression   ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [random_forest         ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] acoustic   ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] syntactic  ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] lexical    ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+  [xgboost               ] all        ... SKIP -- Only 1 minority-class subject(s) — need >= 5 to make a meaningful 80/20 split.
+
+==============================================================
+Summary saved -> /Users/eliasskau/University/UCG/YEAR3/dementia-detection/results/models/training_summary.csv
+  task               model feature_group  cv_auc_mean  cv_auc_std  test_auc  test_f1  test_acc  train_samples  test_samples  train_subjects  test_subjects
+cookie logistic_regression      acoustic        0.622       0.060     0.501    0.509     0.500            444           108             233             59
+cookie logistic_regression     syntactic        0.567       0.029     0.532    0.582     0.574            444           108             233             59
+cookie logistic_regression       lexical        0.762       0.064     0.720    0.679     0.676            444           108             233             59
+cookie logistic_regression           all        0.784       0.020     0.610    0.586     0.556            444           108             233             59
+cookie       random_forest      acoustic        0.568       0.080     0.552    0.599     0.491            444           108             233             59
+cookie       random_forest     syntactic        0.566       0.038     0.588    0.641     0.574            444           108             233             59
+cookie       random_forest       lexical        0.766       0.039     0.631    0.623     0.574            444           108             233             59
+cookie       random_forest           all        0.751       0.022     0.611    0.612     0.519            444           108             233             59
+cookie             xgboost      acoustic        0.591       0.040     0.545    0.583     0.509            444           108             233             59
+cookie             xgboost     syntactic        0.570       0.036     0.557    0.602     0.546            444           108             233             59
+cookie             xgboost       lexical        0.777       0.043     0.649    0.650     0.611            444           108             233             59
+cookie             xgboost           all        0.766       0.013     0.638    0.647     0.565            444           108             233             59
+
+Training complete.

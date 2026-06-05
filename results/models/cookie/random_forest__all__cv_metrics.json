@@ -1,0 +1,18 @@
+{
+  "cv_auc_mean": 0.8437956139537375,
+  "cv_auc_std": 0.029379623638168376,
+  "cv_f1_mean": 0.7910315010679783,
+  "cv_f1_std": 0.012169131371240793,
+  "cv_acc_mean": 0.7454001107251881,
+  "cv_acc_std": 0.01500482731585743,
+  "cv_n_folds": 5,
+  "test_auc": 0.7536008230452674,
+  "test_f1": 0.7131782945736435,
+  "test_acc": 0.6574074074074074,
+  "train_samples": 444,
+  "test_samples": 108,
+  "train_subjects": 233,
+  "test_subjects": 59,
+  "n_features_raw": 264,
+  "n_features_selected": 264
+}

@@ -23,8 +23,14 @@ Baycrest-PPA/Baycrest-PPA-transcripts/
 *.csv
 *.png
 
+# Trained model artifacts (regenerate by running scripts/06_train_models.py etc.)
+*.pkl
+*.pth
+*.pt
+
 # Jupyter checkpoints
 .ipynb_checkpoints/
+experiment.ipynb
 
 # OpenSMILE build artifacts
 build/
@@ -38,3 +44,4 @@ control_ids.txt
 *.xlsx
 *.xls
 *.cdc
+.idea/
