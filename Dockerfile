@@ -10,10 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files first (layer-cached unless they change)
-COPY environment.yml requirements.txt ./
+COPY requirements.txt ./
 
-# Create conda environment
-RUN conda env create -f environment.yml && conda clean -afy
+# Create conda env with Python 3.10, then install packages via pip
+RUN conda create -n dementia-detection python=3.10 -y && conda clean -afy
+RUN conda run -n dementia-detection pip install --no-cache-dir -r requirements.txt
 
 # Make conda env the default Python
 ENV PATH="/opt/conda/envs/dementia-detection/bin:$PATH"
