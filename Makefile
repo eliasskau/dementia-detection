@@ -9,7 +9,7 @@ RESULTS_DIR ?= $(PWD)/results
 # Local dev fallback (requires conda env dementia-detection active)
 PYTHON = conda run -n dementia-detection python
 
-.PHONY: pipeline preprocess features train evaluate clean \
+.PHONY: preprocess features train search export evaluate pipeline clean \
         docker-build docker-test docker-train docker-evaluate docker-pipeline
 
 # ── Docker (official) ─────────────────────────────────────────────────────
@@ -26,38 +26,36 @@ docker-train:
 	docker run --rm \
 		-v $(PITT_DIR):/app/Pitt \
 		-v $(RESULTS_DIR):/app/results \
-		$(IMAGE) conda run -n dementia-detection python scripts/08_train_models.py --task cookie
+		$(IMAGE) conda run -n dementia-detection python pipeline.py train --task cookie
 	docker run --rm \
 		-v $(PITT_DIR):/app/Pitt \
 		-v $(RESULTS_DIR):/app/results \
-		$(IMAGE) conda run -n dementia-detection python scripts/10_export_best_model.py
+		$(IMAGE) conda run -n dementia-detection python pipeline.py export
 
 docker-evaluate:
 	docker run --rm \
 		-v $(PITT_DIR):/app/Pitt \
 		-v $(RESULTS_DIR):/app/results \
-		$(IMAGE) conda run -n dementia-detection python scripts/11_evaluate_best_model.py
+		$(IMAGE) conda run -n dementia-detection python pipeline.py evaluate
 
 docker-pipeline: docker-train docker-evaluate
 
 # ── Local dev (conda) ─────────────────────────────────────────────────────
 preprocess:
-	$(PYTHON) scripts/01_preprocess_transcripts.py
-	$(PYTHON) scripts/02_extract_participant_audio.py
+	$(PYTHON) pipeline.py preprocess
 
 features:
-	$(PYTHON) scripts/03_extract_linguistic_features.py
-	$(PYTHON) scripts/04_extract_acoustic_features.py
-	$(PYTHON) scripts/05_integrate_liwc.py
-	$(PYTHON) scripts/06_add_response_length.py
-	$(PYTHON) scripts/07_combine_features.py
+	$(PYTHON) pipeline.py features
 
 train:
-	$(PYTHON) scripts/08_train_models.py --task cookie
-	$(PYTHON) scripts/10_export_best_model.py
+	$(PYTHON) pipeline.py train --task cookie
+	$(PYTHON) pipeline.py export
+
+search:
+	$(PYTHON) pipeline.py search
 
 evaluate:
-	$(PYTHON) scripts/11_evaluate_best_model.py
+	$(PYTHON) pipeline.py evaluate
 
 pipeline: preprocess features train evaluate
 

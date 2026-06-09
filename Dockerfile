@@ -21,11 +21,11 @@ ENV PATH="/opt/conda/envs/dementia-detection/bin:$PATH"
 SHELL ["conda", "run", "-n", "dementia-detection", "/bin/bash", "-c"]
 
 # Copy project code (data is mounted at runtime, not baked in)
-COPY configs/  ./configs/
-COPY src/      ./src/
-COPY scripts/  ./scripts/
-COPY tests/    ./tests/
-COPY Makefile  ./
+COPY dementia_detection/ ./dementia_detection/
+COPY config/             ./config/
+COPY tests/              ./tests/
+COPY pipeline.py         ./
+COPY Makefile            ./
 
 # Pitt data and results are mounted as volumes at runtime:
 #   docker run -v /your/Pitt:/app/Pitt -v /your/results:/app/results ...

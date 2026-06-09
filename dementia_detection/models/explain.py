@@ -96,3 +96,132 @@ def global_shap(
         .sort_values("mean_abs_shap", ascending=False)
         .reset_index(drop=True)
     )
+
+
+# ---------------------------------------------------------------------------
+# Visualisation helpers
+# ---------------------------------------------------------------------------
+
+def plot_shap(
+    pkl_path: Path,
+    df: pd.DataFrame,
+    top_n: int = 20,
+    out_path: "Path | None" = None,
+) -> Path:
+    """
+    Save a horizontal bar chart of mean |SHAP| values.
+
+    Returns the path of the saved figure.
+    """
+    import matplotlib.pyplot as plt
+    from config.config import FIGURES_DIR
+
+    if out_path is None:
+        out_path = FIGURES_DIR / "shap_summary.png"
+
+    print("Computing SHAP values (KernelExplainer — ~2 min) …")
+    shap_df = global_shap(pkl_path, df)
+    top = shap_df.head(top_n)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.barh(top["feature"][::-1], top["mean_abs_shap"][::-1], color="#2196F3")
+    ax.set_xlabel("Mean |SHAP value|")
+    ax.set_title(f"Top {top_n} Features — global importance (SHAP)")
+    plt.tight_layout()
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"  Saved: {out_path}")
+
+    print(f"\n{'Feature':<35} {'Mean |SHAP|':>12}")
+    print("─" * 50)
+    for _, row in top.iterrows():
+        print(f"  {row['feature']:<33} {row['mean_abs_shap']:>10.4f}")
+
+    return Path(out_path)
+
+
+def plot_calibration(
+    pkl_path: Path,
+    df: pd.DataFrame,
+    out_path: "Path | None" = None,
+) -> Path:
+    """
+    Save a calibration curve (reliability diagram).
+
+    Returns the path of the saved figure.
+    """
+    import matplotlib.pyplot as plt
+    from sklearn.calibration import calibration_curve
+    from config.config import FIGURES_DIR
+
+    if out_path is None:
+        out_path = FIGURES_DIR / "calibration_curve.png"
+
+    pipeline, le, feature_cols = _load(pkl_path)
+    X      = df[feature_cols].values.astype(np.float32)
+    y      = le.transform(df["label"].values)
+    y_prob = pipeline.predict_proba(X)[:, 1]
+
+    prob_true, prob_pred = calibration_curve(y, y_prob, n_bins=10, strategy="uniform")
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.plot(prob_pred, prob_true, "s-", color="#E53935", label="SVM + LIWC")
+    ax.plot([0, 1], [0, 1], "k--", alpha=0.5, label="Perfect calibration")
+    ax.set_xlabel("Mean predicted probability")
+    ax.set_ylabel("Fraction of positives (Dementia)")
+    ax.set_title("Calibration Curve")
+    ax.legend()
+    plt.tight_layout()
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"  Saved: {out_path}")
+    return Path(out_path)
+
+
+def permutation_test(
+    pkl_path: Path,
+    df: pd.DataFrame,
+    n_permutations: int = 1000,
+    out_path: "Path | None" = None,
+    random_state: int = 42,
+) -> float:
+    """
+    Run a permutation test and save a null-distribution histogram.
+
+    Returns the empirical p-value.
+    """
+    import matplotlib.pyplot as plt
+    from sklearn.metrics import roc_auc_score as _roc
+    from config.config import FIGURES_DIR
+
+    if out_path is None:
+        out_path = FIGURES_DIR / "permutation_test.png"
+
+    pipeline, le, feature_cols = _load(pkl_path)
+    X        = df[feature_cols].values.astype(np.float32)
+    y        = le.transform(df["label"].values)
+    true_auc = _roc(y, pipeline.predict_proba(X)[:, 1])
+
+    rng       = np.random.RandomState(random_state)
+    null_aucs = [_roc(rng.permutation(y), pipeline.predict_proba(X)[:, 1])
+                 for _ in range(n_permutations)]
+    p_value = float(np.mean(np.array(null_aucs) >= true_auc))
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.hist(null_aucs, bins=40, color="#B0BEC5", edgecolor="white",
+            label="Null distribution")
+    ax.axvline(true_auc, color="#E53935", linewidth=2,
+               label=f"Observed AUC = {true_auc:.3f}   p = {p_value:.4f}")
+    ax.set_xlabel("AUC")
+    ax.set_ylabel("Count")
+    ax.set_title(f"Permutation Test ({n_permutations} permutations)")
+    ax.legend()
+    plt.tight_layout()
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"  AUC = {true_auc:.3f}   p = {p_value:.4f}")
+    print(f"  Saved: {out_path}")
+    return p_value
