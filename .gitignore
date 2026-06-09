@@ -20,6 +20,7 @@ Pitt/
 # Output files
 *.csv
 *.png
+*.json
 
 # Trained model artifacts (regenerate by running scripts/06_train_models.py etc.)
 *.pkl
