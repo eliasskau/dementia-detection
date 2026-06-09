@@ -10,10 +10,8 @@ venv/
 *.flac
 *.ogg
 
-# Large data/media folders
-Baycrest-PPA/0wav/
-Baycrest-PPA/0extra/
-Baycrest-PPA/Baycrest-PPA-transcripts/
+# Media
+Pitt/
 
 # CHAT transcript files
 *.cha
@@ -35,7 +33,7 @@ experiment.ipynb
 # OpenSMILE build artifacts
 build/
 *.o
-*.aPitt/
+*.a
 WLS/
 PItt-data.xlsx
 control_ids.txt
