@@ -39,9 +39,8 @@ from config.config import (
 # Hardcoded choices keeps --help fast (avoids importing sklearn at parse time)
 _MODELS   = ("svm", "logistic_regression", "random_forest", "xgboost")
 _FEATURES = (
-    "acoustic", "syntactic", "lexical", "liwc", "all",
-    "ablation_no_acoustic", "ablation_no_liwc", "ablation_no_rl",
-    "ablation_no_ac_rl", "ablation_no_ac_rl_syn", "ablation_no_ac_rl_syn_lex",
+    "acoustic", "syntactic", "lexical", "liwc", "response_length", "all",
+    "ablation_no_acoustic", "ablation_no_ac_rl", "ablation_no_ac_rl_syn",
 )
 
 
