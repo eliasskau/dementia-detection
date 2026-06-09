@@ -42,17 +42,18 @@ from sklearn.svm import SVC
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from dementia_detection.models.train import GiniSelector, _GINI_THRESHOLD  # noqa: E402
+from config.config import COMBINED_DIR, GINI_THRESHOLD as _GINI_THRESHOLD  # noqa: E402
+from dementia_detection.models.train import GiniSelector  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Configuration — best model confirmed via held-out test set
 # ---------------------------------------------------------------------------
-TASK         = "cookie"
-FEATURE_GROUP = "liwc"
+TASK           = "cookie"
+FEATURE_GROUP  = "liwc"
 FEATURE_PREFIX = "liwc__"
-GINI_THRESHOLD = _GINI_THRESHOLD["liwc"]   # 0.008 — keeps 57/118 LIWC features
+GINI_THRESH    = _GINI_THRESHOLD["liwc"]   # 0.008 — keeps ~57/118 LIWC features
 
-COMBINED_CSV = PROJECT_ROOT / "Pitt" / "processed" / "combined" / f"{TASK}_features.csv"
+COMBINED_CSV = COMBINED_DIR / f"{TASK}_features.csv"
 OUT_PATH     = PROJECT_ROOT / "results" / "models" / "best_model.pkl"
 
 
@@ -218,7 +219,7 @@ def main() -> None:
     )
     steps = [
         ("imputer",       SimpleImputer(strategy="constant", fill_value=0.0)),
-        ("gini_selector", GiniSelector(threshold=GINI_THRESHOLD)),
+        ("gini_selector", GiniSelector(threshold=GINI_THRESH)),
         ("scaler",        StandardScaler()),
         ("clf",           estimator),
     ]
@@ -246,7 +247,7 @@ def main() -> None:
         "n_subjects":         df["subject_id"].nunique(),
         "n_features_raw":     len(feature_cols),
         "n_features_selected": n_selected,
-        "gini_threshold":     GINI_THRESHOLD,
+        "gini_threshold":     GINI_THRESH,
         "test_auc":           0.789,   # from held-out evaluation in 06_train_models.py
         "cv_auc_mean":        0.855,
         "cv_auc_std":         0.038,

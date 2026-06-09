@@ -67,12 +67,44 @@ warnings.filterwarnings("ignore")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from dementia_detection.models.train import (  # noqa: E402
-    GiniSelector,
-    _GINI_THRESHOLD,
-    _subject_train_test_split,
-    _feature_cols,
-)
+from dementia_detection.models.train import GiniSelector  # noqa: E402
+from config.config import GINI_THRESHOLD as _GINI_THRESHOLD, RANDOM_STATE  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Helpers (search-specific — not part of the training library)
+# ---------------------------------------------------------------------------
+
+def _feature_cols(df: "pd.DataFrame", feature_group: str) -> "list[str]":
+    """Return all columns whose prefix matches *feature_group*."""
+    prefix = f"{feature_group}__"
+    return [c for c in df.columns if c.startswith(prefix)]
+
+
+def _subject_train_test_split(
+    df: "pd.DataFrame",
+    test_size: float = 0.2,
+) -> "tuple[pd.DataFrame, pd.DataFrame]":
+    """
+    80/20 subject-aware split preserving class balance.
+    Deterministic given RANDOM_STATE.
+    """
+    subj_df = (
+        df.groupby("subject_id")["label"]
+        .agg(lambda x: x.mode()[0])
+        .reset_index()
+        .rename(columns={"label": "subject_label"})
+    )
+    skf = StratifiedKFold(
+        n_splits=int(round(1 / test_size)),
+        shuffle=True,
+        random_state=RANDOM_STATE,
+    )
+    _, test_subj_idx = next(
+        skf.split(subj_df["subject_id"], subj_df["subject_label"])
+    )
+    test_subjects = set(subj_df.loc[test_subj_idx, "subject_id"])
+    mask = df["subject_id"].isin(test_subjects)
+    return df[~mask].reset_index(drop=True), df[mask].reset_index(drop=True)
 
 # ---------------------------------------------------------------------------
 # Config
