@@ -159,25 +159,12 @@ FEATURE_GROUPS: dict[str, str | None] = {
     "liwc":            "liwc__",
     "response_length": "response_length__",
     "all":             None,
-    # all_pca: same feature set as "all" but PCA(95% variance) applied inside
-    # the pipeline.  Only used with linear models (LR, SVM) — tree models are
-    # automatically skipped because PCA removes the named-feature structure that
-    # makes them both accurate and interpretable via SHAP.
-    "all_pca":         None,
 }
 
 # Feature groups where PCA dimensionality reduction is applied.
-# Justification for NOT applying PCA to single-modality groups:
-#   1. Interpretability — single-group SHAP values map to named features
-#      (e.g. liwc__nonflu, acoustic__F0mean).  PCA principal components have
-#      no semantic meaning and cannot support feature-importance analysis.
-#   2. Regularisation suffices — LIWC (118 feats, n/p ≈ 3.8) and acoustic
-#      (88 feats, n/p ≈ 5.0) are within ranges where L2 regularisation in
-#      LR/SVM and ensemble diversity in RF/XGB already prevent overfitting.
-#   3. PCA is only justified for the "all" group (262 feats, n/p ≈ 1.7) where
-#      correlated cross-modal features violate the assumptions of a linear
-#      decision boundary and exceed the recommended 10 samples-per-feature.
-_PCA_GROUPS = {"all_pca"}
+# Removed all_pca: PCA destroys named-feature structure needed for SHAP, and
+# SVM/LR regularisation already handles the 264-feature "all" group at n=552.
+_PCA_GROUPS: set = set()
 
 # Models for which PCA is meaningful.  Tree-based ensembles split on individual
 # features, so PCA rotations destroy interpretability without accuracy benefit
@@ -221,10 +208,10 @@ _GINI_GROUPS = {"acoustic", "liwc"}
 # GiniSelector is applied to acoustic__ and liwc__ prefixes within each ablation
 # group exactly as it is in the plain single-group training runs.
 ABLATION_GROUPS: dict[str, frozenset[str]] = {
-    "ablation_no_acoustic":      frozenset({"acoustic__"}),
-    "ablation_no_ac_rl":         frozenset({"acoustic__", "response_length__"}),
-    "ablation_no_ac_rl_syn":     frozenset({"acoustic__", "response_length__", "syntactic__"}),
-    "ablation_no_ac_rl_syn_lex": frozenset({"acoustic__", "response_length__", "syntactic__", "lexical__"}),
+    "ablation_no_acoustic":  frozenset({"acoustic__"}),
+    "ablation_no_ac_rl":     frozenset({"acoustic__", "response_length__"}),
+    "ablation_no_ac_rl_syn": frozenset({"acoustic__", "response_length__", "syntactic__"}),
+    # ablation_no_ac_rl_syn_lex removed: identical columns to "liwc" standalone
 }
 
 # Register ablation groups in FEATURE_GROUPS so the CLI accepts them
