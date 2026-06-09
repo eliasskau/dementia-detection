@@ -42,7 +42,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-from configs.config import (
+from config.config import (
     BOOTSTRAP_CI, BOOTSTRAP_N, GINI_THRESHOLD as _GINI_THRESHOLD,
     RANDOM_STATE, RSKF_REPEATS, RSKF_SPLITS,
 )

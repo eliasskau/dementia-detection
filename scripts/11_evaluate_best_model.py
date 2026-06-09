@@ -33,7 +33,7 @@ from sklearn.preprocessing import LabelEncoder
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from configs.config import FIGURES_DIR, MODELS_DIR, COMBINED_DIR, TASK, RANDOM_STATE
+from config.config import FIGURES_DIR, MODELS_DIR, COMBINED_DIR, TASK, RANDOM_STATE
 from src.models.explain import global_shap
 
 PKL_PATH = MODELS_DIR / TASK / "svm__liwc.pkl"

@@ -1,6 +1,6 @@
 # Dementia Detection from Speech
 
-Speech-based dementia detection on the DementiaBank Pitt Corpus using LIWC-22, acoustic (eGeMAPS), lexical (LCA), and syntactic (SCA) features.
+This Github repository from the University College Groningen Project Year 3: Speech-based dementia detection on the DementiaBank Pitt Corpus using LIWC-22, acoustic (eGeMAPS), lexical (LCA), and syntactic (SCA) features. Data can be accessed from Dementia Bank on request.
 
 **Best result:** SVM + LIWC · RSKF-AUC = 0.789 · 95% CI [0.721, 0.849] · vs. Hoang et al. 2024 baseline 0.646
 
@@ -19,6 +19,11 @@ pip install -r requirements.txt
 ```
 
 ---
+
+## Set up with Docker
+'''bash
+
+'''
 
 ## Data
 
@@ -106,4 +111,35 @@ results/
   figures/        SHAP, calibration, permutation test plots
 notebooks/        EDA only
 tests/            unit tests
+
+├───Pitt 
+│   ├───raw # raw data downloaded from dementia bank
+│   │   ├───dementia
+│   │   ├───Pitt-transcript
+│   │   └───control
+│   ├───intermediate # after cleaning
+│   │   ├───cleaned_transcripts
+│   │   └───participant_only_audio
+│   └───processed # .csv of features extracted
+│   │   ├───LIWC
+│   │   ├───acoustic
+│   │   ├───lexical
+│   │   ├───syntactic
+│   │   └───combined
+├───models  # Stores .pkl
+├───notebooks  # Contains experimental .ipynbs
+├───project_name
+│   ├───data  # For data processing, not storing .csv
+│   ├───features
+│   └───models  # For model creation, not storing .pkl
+├───config
+│   └───config.py
+├───tests #unit tests
+├───.gitignore
+├───.pre-commit-config.yaml
+├───main.py
+├───train_model.py
+├───Pipfile
+├───Pipfile.lock
+├───README.md
 ```
