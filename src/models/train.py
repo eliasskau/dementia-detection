@@ -1,25 +1,18 @@
 """
 train.py
 --------
-Train three classifiers on combined acoustic + syntactic + lexical features.
+Train classifiers on combined feature sets from the Pitt corpus.
 
 Evaluation protocol
 -------------------
-    1. Subject-aware 80/20 train/test split
-       - Split is done at SUBJECT level (not session level)
-       - All sessions of the same speaker stay on the same side
-       - Stratified by diagnosis label
-       - The 20% test set is held out and NEVER seen during training
+    Repeated Stratified K-Fold (5 repeats × 5 folds) at subject level.
+    - Splits on unique subjects (no subject bleeds across train/test)
+    - Stratified by diagnosis label at subject level
+    - 25 independent test folds → rskf_auc_mean ± rskf_auc_std
+    - Bootstrap 95% CI on pooled fold predictions (1000 resamples)
+    - Final model fit on full dataset and saved for deployment
 
-    2. 5-fold cross-validation on the 80% train set
-       - Also subject-aware (no subject bleeds across folds)
-       - Used to report generalisation variance (CV-AUC +/- std)
-
-    3. Final model fit on full 80% train set -> evaluated on 20% test set
-       - test_auc / test_f1 / test_acc are the real reported numbers
-
-Tasks with fewer than 5 minority-class subjects are skipped
-(recall/sentence/fluency are ~99% Dementia so they cannot be split meaningfully).
+Tasks with fewer than 5 minority-class subjects are skipped.
 
 Outputs
 -------
@@ -43,11 +36,16 @@ from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
+
+from configs.config import (
+    BOOTSTRAP_CI, BOOTSTRAP_N, GINI_THRESHOLD as _GINI_THRESHOLD,
+    RANDOM_STATE, RSKF_REPEATS, RSKF_SPLITS,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -200,20 +198,9 @@ _PCA_MODELS = {"logistic_regression", "svm"}
 #   - response_length (2 feats): too few features to filter.
 _GINI_GROUPS = {"acoustic", "liwc"}
 
-# Per-group Gini thresholds (features below threshold are dropped).
-# acoustic: threshold 0.012 keeps top 30/88 features — the core eGeMAPS
-#   descriptors (jitter, F0 percentiles, MFCCs 2-4, voiced/unvoiced segment
-#   stats, F2/F3 formants, shimmer, spectral slope).  Ranks 31-88 are
-#   redundant variants of the same measures (different normalisation /
-#   frequency bands) with near-identical importance values, so retaining them
-#   only inflates the feature:sample ratio without adding signal.
-# liwc: threshold 0.008 keeps 57/118 features, dropping 61 categories that
-#   are essentially absent from cookie-task speech (liwc__Emoji, liwc__illness,
-#   liwc__politic, liwc__substances, etc. — all Gini < 0.001).
-_GINI_THRESHOLD: dict[str, float] = {
-    "acoustic": 0.012,
-    "liwc":     0.008,
-}
+# Per-group Gini thresholds — defined in configs/config.py
+# acoustic: 0.012 keeps top 30/88 eGeMAPS features
+# liwc:     0.008 keeps 57/118 LIWC categories
 
 # ---------------------------------------------------------------------------
 # Ablation groups — leave-one-modality-out study
@@ -342,91 +329,26 @@ def _subject_train_test_split(
 
 
 # ---------------------------------------------------------------------------
-# 5-fold CV on the 80% train set
+# Bootstrap confidence interval on AUC
 # ---------------------------------------------------------------------------
 
-def cv_on_train(
-    df_train: pd.DataFrame,
-    feature_group: str,
-    model_name: str,
-    n_splits: int = 5,
-) -> dict:
-    """Subject-aware stratified k-fold CV on the training split only."""
-    cols = _feature_cols(df_train, feature_group)
-    X = df_train[cols].values.astype(np.float32)
-    le = LabelEncoder()
-    y = le.fit_transform(df_train["label"].values)
-
-    subject_ids = df_train["subject_id"].values
-    unique_subj = np.unique(subject_ids)
-    subj_label = np.array([
-        int(y[subject_ids == s].mean() >= 0.5)
-        for s in unique_subj
-    ])
-
-    counts = np.bincount(subj_label)
-    actual_splits = min(n_splits, int(counts.min()))
-    if actual_splits < 2:
-        null = {k: None for k in (
-            "cv_auc_mean", "cv_auc_std",
-            "cv_f1_mean",  "cv_f1_std",
-            "cv_acc_mean", "cv_acc_std",
-            "cv_n_folds",
-        )}
-        return null
-
-    skf = StratifiedKFold(n_splits=actual_splits, shuffle=True, random_state=42)
-    estimator, needs_scaling = MODELS[model_name]
-    use_pca  = (feature_group in _PCA_GROUPS) and (model_name in _PCA_MODELS)
-    # Ablation groups retain liwc__ (and sometimes acoustic__) columns, so Gini
-    # selection is applied with the liwc threshold (0.008) as the conservative cut.
-    use_gini = feature_group in _GINI_GROUPS or feature_group in ABLATION_GROUPS
-
-    fold_auc, fold_f1, fold_acc = [], [], []
-
-    for tr_idx, val_idx in skf.split(unique_subj, subj_label):
-        val_subjects = set(unique_subj[val_idx])
-        val_mask = np.array([s in val_subjects for s in subject_ids])
-        tr_mask  = ~val_mask
-
-        X_tr,  X_val = X[tr_mask],  X[val_mask]
-        y_tr,  y_val = y[tr_mask],  y[val_mask]
-
-        if len(np.unique(y_val)) < 2 or len(np.unique(y_tr)) < 2:
+def _bootstrap_auc_ci(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+) -> tuple[float, float]:
+    rng  = np.random.RandomState(RANDOM_STATE)
+    size = len(y_true)
+    aucs = []
+    for _ in range(BOOTSTRAP_N):
+        idx = rng.randint(0, size, size)
+        if len(np.unique(y_true[idx])) < 2:
             continue
-
-        est_cv = clone(estimator)
-        if model_name == "xgboost":
-            n_neg = int(np.sum(y_tr == 0))
-            n_pos = int(np.sum(y_tr == 1))
-            est_cv.set_params(scale_pos_weight=n_neg / n_pos if n_pos > 0 else 1.0)
-        pipe = _build_pipeline(model_name, est_cv, needs_scaling, use_pca=use_pca, use_gini=use_gini, feature_group=feature_group)
-        pipe.fit(X_tr, y_tr)
-        y_prob = pipe.predict_proba(X_val)[:, 1]
-        y_pred = pipe.predict(X_val)
-
-        fold_auc.append(roc_auc_score(y_val, y_prob))
-        fold_f1.append(f1_score(y_val, y_pred, zero_division=0))
-        fold_acc.append(accuracy_score(y_val, y_pred))
-
-    if not fold_auc:
-        null = {k: None for k in (
-            "cv_auc_mean", "cv_auc_std",
-            "cv_f1_mean",  "cv_f1_std",
-            "cv_acc_mean", "cv_acc_std",
-            "cv_n_folds",
-        )}
-        return null
-
-    return {
-        "cv_auc_mean": float(np.mean(fold_auc)),
-        "cv_auc_std":  float(np.std(fold_auc)),
-        "cv_f1_mean":  float(np.mean(fold_f1)),
-        "cv_f1_std":   float(np.std(fold_f1)),
-        "cv_acc_mean": float(np.mean(fold_acc)),
-        "cv_acc_std":  float(np.std(fold_acc)),
-        "cv_n_folds":  len(fold_auc),
-    }
+        aucs.append(roc_auc_score(y_true[idx], y_prob[idx]))
+    alpha = (1 - BOOTSTRAP_CI) / 2
+    return (
+        float(np.percentile(aucs, 100 * alpha)),
+        float(np.percentile(aucs, 100 * (1 - alpha))),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -440,103 +362,120 @@ def train_single(
     out_dir: Path,
 ) -> dict:
     """
-    Full pipeline for one model x feature-group combo:
-      1. 80/20 subject-aware split
-      2. 5-fold CV on the 80% train set  -> CV-AUC +/- std
-      3. Fit on full 80% train set
-      4. Evaluate on held-out 20% test set  -> test_auc / test_f1 / test_acc
-      5. Save .pkl + metrics JSON
+    Evaluate one model × feature-group with repeated stratified k-fold,
+    then fit the final model on the full dataset and save it.
     """
-    print(f"  [{model_name:22s}] {feature_group:10s} ...", end=" ", flush=True)
+    print(f"  [{model_name:22s}] {feature_group:30s} ...", end=" ", flush=True)
 
-    # PCA is only meaningful for linear models; silently skip tree-based models
-    # for all_pca (they are already trained under the plain "all" group).
     if feature_group in _PCA_GROUPS and model_name not in _PCA_MODELS:
-        print("SKIP -- PCA not applied to tree-based models (see _PCA_MODELS)")
+        print("SKIP -- PCA not applied to tree-based models")
         return {"skipped": True, "reason": "PCA not applicable to tree-based models"}
 
     use_pca  = feature_group in _PCA_GROUPS
     use_gini = feature_group in _GINI_GROUPS or feature_group in ABLATION_GROUPS
 
-    try:
-        df_train, df_test = _subject_train_test_split(df)
-    except ValueError as e:
-        print(f"SKIP -- {e}")
-        return {"skipped": True, "reason": str(e)}
-
     cols = _feature_cols(df, feature_group)
     le   = LabelEncoder().fit(df["label"].values)
+    X    = df[cols].values.astype(np.float32)
+    y    = le.transform(df["label"].values)
 
-    X_train = df_train[cols].values.astype(np.float32)
-    y_train = le.transform(df_train["label"].values)
-    X_test  = df_test[cols].values.astype(np.float32)
-    y_test  = le.transform(df_test["label"].values)
+    subject_ids = df["subject_id"].values
+    unique_subj = np.unique(subject_ids)
+    subj_label  = np.array([
+        int(y[subject_ids == s].mean() >= 0.5) for s in unique_subj
+    ])
 
-    # --- CV on train set only ---
-    cv = cv_on_train(df_train, feature_group, model_name)
+    if int(np.bincount(subj_label).min()) < _MIN_MINORITY_SUBJECTS:
+        msg = (f"Only {np.bincount(subj_label).min()} minority-class subjects"
+               f" — need >= {_MIN_MINORITY_SUBJECTS}")
+        print(f"SKIP -- {msg}")
+        return {"skipped": True, "reason": msg}
 
-    # --- Final fit on full 80% train ---
     estimator, needs_scaling = MODELS[model_name]
-    estimator_cloned = clone(estimator)
+    rskf = RepeatedStratifiedKFold(
+        n_splits=RSKF_SPLITS, n_repeats=RSKF_REPEATS, random_state=RANDOM_STATE
+    )
 
-    # For XGBoost: set scale_pos_weight = n_negative / n_positive from train set
-    # (equivalent to class_weight="balanced" in sklearn models)
+    fold_aucs, fold_f1s, fold_accs = [], [], []
+    all_y_true, all_y_prob = [], []
+
+    for train_subj_idx, test_subj_idx in rskf.split(unique_subj, subj_label):
+        test_subjects = set(unique_subj[test_subj_idx])
+        test_mask     = np.array([s in test_subjects for s in subject_ids])
+        X_tr, X_te    = X[~test_mask], X[test_mask]
+        y_tr, y_te    = y[~test_mask], y[test_mask]
+
+        if len(np.unique(y_te)) < 2:
+            continue
+
+        est = clone(estimator)
+        if model_name == "xgboost":
+            n_neg = int(np.sum(y_tr == 0))
+            n_pos = int(np.sum(y_tr == 1))
+            est.set_params(scale_pos_weight=n_neg / n_pos if n_pos > 0 else 1.0)
+
+        pipe = _build_pipeline(model_name, est, needs_scaling,
+                               use_pca=use_pca, use_gini=use_gini,
+                               feature_group=feature_group)
+        pipe.fit(X_tr, y_tr)
+        y_prob = pipe.predict_proba(X_te)[:, 1]
+        y_pred = pipe.predict(X_te)
+
+        fold_aucs.append(roc_auc_score(y_te, y_prob))
+        fold_f1s.append(f1_score(y_te, y_pred, zero_division=0))
+        fold_accs.append(accuracy_score(y_te, y_pred))
+        all_y_true.extend(y_te.tolist())
+        all_y_prob.extend(y_prob.tolist())
+
+    ci_low, ci_high = _bootstrap_auc_ci(
+        np.array(all_y_true), np.array(all_y_prob)
+    )
+
+    auc_mean = float(np.mean(fold_aucs))
+    auc_std  = float(np.std(fold_aucs))
+    print(
+        f"RSKF-AUC={auc_mean:.3f}±{auc_std:.3f}  "
+        f"95%CI=[{ci_low:.3f},{ci_high:.3f}]  "
+        f"F1={float(np.mean(fold_f1s)):.3f}"
+    )
+
+    # Final model fit on the full dataset
+    est_final = clone(estimator)
     if model_name == "xgboost":
-        n_neg = int(np.sum(y_train == 0))   # Control
-        n_pos = int(np.sum(y_train == 1))   # Dementia
-        spw   = n_neg / n_pos if n_pos > 0 else 1.0
-        estimator_cloned.set_params(scale_pos_weight=spw)
+        n_neg = int(np.sum(y == 0))
+        n_pos = int(np.sum(y == 1))
+        est_final.set_params(scale_pos_weight=n_neg / n_pos if n_pos > 0 else 1.0)
+    pipe_final = _build_pipeline(model_name, est_final, needs_scaling,
+                                 use_pca=use_pca, use_gini=use_gini,
+                                 feature_group=feature_group)
+    pipe_final.fit(X, y)
 
-    pipe = _build_pipeline(model_name, estimator_cloned, needs_scaling, use_pca=use_pca, use_gini=use_gini, feature_group=feature_group)
-    pipe.fit(X_train, y_train)
-
-    # --- Evaluate on held-out 20% test ---
-    y_prob = pipe.predict_proba(X_test)[:, 1]
-    y_pred = pipe.predict(X_test)
-
-    test_auc = float(roc_auc_score(y_test, y_prob)) if len(np.unique(y_test)) > 1 else None
-    test_f1  = float(f1_score(y_test, y_pred, zero_division=0))
-    test_acc = float(accuracy_score(y_test, y_pred))
-
-    test_metrics = {
-        "test_auc":       test_auc,
-        "test_f1":        test_f1,
-        "test_acc":       test_acc,
-        "train_samples":  int(len(y_train)),
-        "test_samples":   int(len(y_test)),
-        "train_subjects": int(df_train["subject_id"].nunique()),
-        "test_subjects":  int(df_test["subject_id"].nunique()),
-        "n_features_raw": int(len(cols)),
+    metrics = {
+        "rskf_auc_mean":     auc_mean,
+        "rskf_auc_std":      auc_std,
+        "rskf_auc_ci_low":   float(ci_low),
+        "rskf_auc_ci_high":  float(ci_high),
+        "rskf_f1_mean":      float(np.mean(fold_f1s)),
+        "rskf_f1_std":       float(np.std(fold_f1s)),
+        "rskf_acc_mean":     float(np.mean(fold_accs)),
+        "rskf_acc_std":      float(np.std(fold_accs)),
+        "rskf_n_folds":      len(fold_aucs),
+        "n_samples":         int(len(df)),
+        "n_subjects":        int(len(unique_subj)),
+        "n_features_raw":    int(len(cols)),
         "n_features_selected": (
-            int(pipe.named_steps["gini_selector"].n_selected_)
+            int(pipe_final.named_steps["gini_selector"].n_selected_)
             if use_gini else int(len(cols))
         ),
     }
 
-    # Pretty print
-    cv_str   = (f"{cv['cv_auc_mean']:.3f}+/-{cv['cv_auc_std']:.3f}"
-                if cv.get("cv_auc_mean") is not None else "N/A")
-    test_str = f"{test_auc:.3f}" if test_auc is not None else "N/A"
-    print(
-        f"CV-AUC={cv_str}  |  "
-        f"Test-AUC={test_str}  Test-F1={test_f1:.3f}  Test-Acc={test_acc:.3f}"
-    )
-
-    # --- Persist ---
     out_dir.mkdir(parents=True, exist_ok=True)
-    pkl_path = out_dir / f"{model_name}__{feature_group}.pkl"
-    with open(pkl_path, "wb") as f:
-        pickle.dump(
-            {"pipeline": pipe, "label_encoder": le, "feature_cols": cols},
-            f,
-        )
+    with open(out_dir / f"{model_name}__{feature_group}.pkl", "wb") as f:
+        pickle.dump({"pipeline": pipe_final, "label_encoder": le, "feature_cols": cols}, f)
+    with open(out_dir / f"{model_name}__{feature_group}__cv_metrics.json", "w") as f:
+        json.dump(metrics, f, indent=2)
 
-    all_metrics = {**cv, **test_metrics}
-    json_path = out_dir / f"{model_name}__{feature_group}__cv_metrics.json"
-    with open(json_path, "w") as f:
-        json.dump(all_metrics, f, indent=2)
-
-    return all_metrics
+    return metrics
 
 
 # ---------------------------------------------------------------------------
@@ -592,18 +531,19 @@ def _write_summary(results: dict, output_dir: Path) -> None:
                 if m.get("skipped"):
                     continue
                 rows.append({
-                    "task":           task,
-                    "model":          model_name,
-                    "feature_group":  fg,
-                    "cv_auc_mean":    m.get("cv_auc_mean"),
-                    "cv_auc_std":     m.get("cv_auc_std"),
-                    "test_auc":       m.get("test_auc"),
-                    "test_f1":        m.get("test_f1"),
-                    "test_acc":       m.get("test_acc"),
-                    "train_samples":  m.get("train_samples"),
-                    "test_samples":   m.get("test_samples"),
-                    "train_subjects": m.get("train_subjects"),
-                    "test_subjects":  m.get("test_subjects"),
+                    "task":              task,
+                    "model":             model_name,
+                    "feature_group":     fg,
+                    "rskf_auc_mean":     m.get("rskf_auc_mean"),
+                    "rskf_auc_std":      m.get("rskf_auc_std"),
+                    "rskf_auc_ci_low":   m.get("rskf_auc_ci_low"),
+                    "rskf_auc_ci_high":  m.get("rskf_auc_ci_high"),
+                    "rskf_f1_mean":      m.get("rskf_f1_mean"),
+                    "rskf_f1_std":       m.get("rskf_f1_std"),
+                    "rskf_acc_mean":     m.get("rskf_acc_mean"),
+                    "rskf_n_folds":      m.get("rskf_n_folds"),
+                    "n_samples":         m.get("n_samples"),
+                    "n_subjects":        m.get("n_subjects"),
                 })
 
     if not rows:
