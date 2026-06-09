@@ -37,7 +37,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.preprocessing.cha_to_txt import cha_to_txt  # noqa: E402
+from dementia_detection.data.cha_to_txt import cha_to_txt  # noqa: E402
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 INPUT_DIR  = PROJECT_ROOT / "Pitt" / "raw" / "Pitt-transcript"

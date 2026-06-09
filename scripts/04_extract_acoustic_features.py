@@ -42,7 +42,7 @@ _ALL_TASKS = ("cookie", "fluency", "recall", "sentence")
 # ---------------------------------------------------------------------------
 # Import feature extractor
 # ---------------------------------------------------------------------------
-from src.feature_extraction.acoustic import extract_all_acoustic  # noqa: E402
+from dementia_detection.features.acoustic import extract_all_acoustic  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

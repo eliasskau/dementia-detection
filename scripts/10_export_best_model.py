@@ -42,7 +42,7 @@ from sklearn.svm import SVC
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.models.train import GiniSelector, _GINI_THRESHOLD  # noqa: E402
+from dementia_detection.models.train import GiniSelector, _GINI_THRESHOLD  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Configuration — best model confirmed via held-out test set

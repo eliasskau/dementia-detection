@@ -28,7 +28,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.feature_extraction.linguistic import extract_all  # noqa: E402
+from dementia_detection.features.linguistic import extract_all  # noqa: E402
 
 TRANSCRIPTS_DIR = PROJECT_ROOT / "Pitt" / "intermediate" / "cleaned_transcripts"
 OUTPUT_DIR      = PROJECT_ROOT / "Pitt" / "processed"

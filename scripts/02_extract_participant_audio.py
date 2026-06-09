@@ -38,7 +38,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.preprocessing.audio_extractor import extract_participant_audio  # noqa: E402
+from dementia_detection.data.audio_extractor import extract_participant_audio  # noqa: E402
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 CHA_DIR    = PROJECT_ROOT / "Pitt" / "raw" / "Pitt-transcript"

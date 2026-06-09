@@ -31,7 +31,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 COMBINED_DIR = PROJECT_ROOT / "Pitt" / "processed" / "combined"
 MODELS_DIR   = PROJECT_ROOT / "results" / "models"
 
-from src.models.train import MODELS, FEATURE_GROUPS, train_all  # noqa: E402
+from dementia_detection.models.train import MODELS, FEATURE_GROUPS, train_all  # noqa: E402
 
 _ALL_TASKS = ("cookie", "fluency", "recall", "sentence")
 

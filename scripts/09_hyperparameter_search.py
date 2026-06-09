@@ -67,7 +67,7 @@ warnings.filterwarnings("ignore")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.models.train import (  # noqa: E402
+from dementia_detection.models.train import (  # noqa: E402
     GiniSelector,
     _GINI_THRESHOLD,
     _subject_train_test_split,
