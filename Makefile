@@ -1,6 +1,10 @@
-PYTHON = conda run -n dementia-detection python
+PYTHON      = conda run -n dementia-detection python
+IMAGE       = dementia-detection
+PITT_DIR   ?= $(PWD)/Pitt
+RESULTS_DIR ?= $(PWD)/results
 
-.PHONY: pipeline preprocess features train evaluate clean
+.PHONY: pipeline preprocess features train evaluate clean \
+        docker-build docker-train docker-evaluate docker-test
 
 pipeline: preprocess features train evaluate
 
@@ -25,3 +29,25 @@ evaluate:
 
 clean:
 	rm -rf results/models/cookie/*.pkl results/figures/*.png
+
+# ── Docker ────────────────────────────────────────────────────────────────
+docker-build:
+	docker build -t $(IMAGE) .
+
+docker-test:
+	docker run --rm \
+		-v $(PITT_DIR):/app/Pitt \
+		-v $(RESULTS_DIR):/app/results \
+		$(IMAGE)
+
+docker-train:
+	docker run --rm \
+		-v $(PITT_DIR):/app/Pitt \
+		-v $(RESULTS_DIR):/app/results \
+		$(IMAGE) conda run -n dementia-detection make train
+
+docker-evaluate:
+	docker run --rm \
+		-v $(PITT_DIR):/app/Pitt \
+		-v $(RESULTS_DIR):/app/results \
+		$(IMAGE) conda run -n dementia-detection make evaluate
