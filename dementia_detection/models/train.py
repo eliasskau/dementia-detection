@@ -31,8 +31,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin, clone
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier  # used by GiniSelector internally
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
@@ -130,22 +130,13 @@ MODELS: dict[str, tuple] = {
             kernel="rbf", C=1.0, gamma="scale",
             class_weight="balanced", probability=True, random_state=42,
         ),
-        True,   # SVM always needs scaling
-    ),
-    "random_forest": (
-        RandomForestClassifier(
-            n_estimators=200, class_weight="balanced", random_state=42, n_jobs=-1
-        ),
-        False,
+        True,
     ),
     "xgboost": (
         XGBClassifier(
             n_estimators=200, max_depth=4, learning_rate=0.05,
             subsample=0.8, colsample_bytree=0.8,
             eval_metric="logloss", random_state=42, n_jobs=-1,
-            # class imbalance: scale_pos_weight = n_negative / n_positive
-            # computed dynamically in _build_pipeline → set to 1.0 as placeholder,
-            # overridden in train_single() after the split is known
             scale_pos_weight=1.0,
         ),
         False,
@@ -171,19 +162,13 @@ _PCA_GROUPS: set = set()
 # (empirically, RF/XGB show no AUC improvement with PCA on tabular data).
 _PCA_MODELS = {"logistic_regression", "svm"}
 
-# Feature groups where Gini-based feature selection is applied inside the pipeline.
-# Justification for selecting only acoustic and LIWC (not lexical/syntactic):
-#   - acoustic (88 feats): Gini ranking reveals a clear tail of near-zero importance
-#     features (threshold 0.008 keeps 81/88) — marginal but principled cleanup.
-#   - liwc (118 feats): 30 features have Gini < 0.001 (e.g. liwc__Emoji,
-#     liwc__illness, liwc__politic, liwc__substances — essentially absent from
-#     cookie-task speech).  Threshold 0.008 keeps 57/118, halving the LIWC
-#     dimensionality while retaining all informative categories.
-#   - lexical (33 feats) and syntactic (23 feats) are small enough that all
-#     features carry meaningful weight; applying a Gini filter would risk
-#     dropping genuinely informative low-variance features in these groups.
-#   - response_length (2 feats): too few features to filter.
-_GINI_GROUPS = {"acoustic", "liwc"}
+# Feature groups where Gini-based cross-modal feature selection is applied.
+# "acoustic" and "liwc": within-modality selection (removes near-zero features).
+# "all": cross-modal selection on all 264 features — the selector ranks every
+#        feature regardless of modality and keeps those above threshold 0.005,
+#        retaining ~60-80 features and naturally surfacing whichever modalities
+#        are most informative at the individual-feature level.
+_GINI_GROUPS = {"acoustic", "liwc", "all"}
 
 # Per-group Gini thresholds — defined in configs/config.py
 # acoustic: 0.012 keeps top 30/88 eGeMAPS features
