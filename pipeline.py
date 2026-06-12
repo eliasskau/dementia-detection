@@ -122,6 +122,12 @@ def cmd_export(args: argparse.Namespace) -> None:
     export_best_model()
 
 
+def cmd_stack(args: argparse.Namespace) -> None:
+    from dementia_detection.models import run_stacking
+
+    run_stacking(task=args.task if hasattr(args, "task") and args.task else TASK)
+
+
 def cmd_evaluate(args: argparse.Namespace) -> None:
     import pandas as pd
     from dementia_detection.models import plot_shap, plot_calibration, permutation_test
@@ -221,6 +227,11 @@ def _make_parser() -> argparse.ArgumentParser:
     # ── export ────────────────────────────────────────────────────────
     p = sub.add_parser("export", help="Export best model as DementiaRiskPredictor")
     p.set_defaults(func=cmd_export)
+
+    # ── stack ─────────────────────────────────────────────────────────
+    p = sub.add_parser("stack", help="Late-fusion stacking across all modalities")
+    p.add_argument("--task", choices=list(TASKS), default=None)
+    p.set_defaults(func=cmd_stack)
 
     # ── evaluate ──────────────────────────────────────────────────────
     p = sub.add_parser("evaluate", help="SHAP, calibration curve, permutation test")
