@@ -43,10 +43,13 @@ BOOTSTRAP_CI  = 0.95
 # Model constants
 # ---------------------------------------------------------------------------
 
-# Gini feature selection thresholds (per modality)
+# Gini feature selection thresholds (per modality).
+# "all": cross-modal selection on all 264 features — threshold tuned so
+#        ~60-80 features are retained (n/p ≈ 7-9, safe for SVM/LR).
 GINI_THRESHOLD = {
     "acoustic": 0.012,
     "liwc":     0.008,
+    "all":      0.005,
 }
 
 RANDOM_STATE = 42
