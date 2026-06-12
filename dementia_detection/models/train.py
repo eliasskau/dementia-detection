@@ -384,6 +384,7 @@ def train_single(
     )
 
     fold_aucs, fold_f1s, fold_accs = [], [], []
+    fold_train_aucs = []
     all_y_true, all_y_prob = [], []
 
     for train_subj_idx, test_subj_idx in rskf.split(unique_subj, subj_label):
@@ -414,16 +415,24 @@ def train_single(
         all_y_true.extend(y_te.tolist())
         all_y_prob.extend(y_prob.tolist())
 
+        # Train AUC on the same fold — measures overfitting gap
+        y_prob_tr = pipe.predict_proba(X_tr)[:, 1]
+        fold_train_aucs.append(roc_auc_score(y_tr, y_prob_tr))
+
     ci_low, ci_high = _bootstrap_auc_ci(
         np.array(all_y_true), np.array(all_y_prob)
     )
+
+    train_auc_mean = float(np.mean(fold_train_aucs))
+    overfit_gap    = round(train_auc_mean - auc_mean, 4)
 
     auc_mean = float(np.mean(fold_aucs))
     auc_std  = float(np.std(fold_aucs))
     print(
         f"RSKF-AUC={auc_mean:.3f}±{auc_std:.3f}  "
         f"95%CI=[{ci_low:.3f},{ci_high:.3f}]  "
-        f"F1={float(np.mean(fold_f1s)):.3f}"
+        f"F1={float(np.mean(fold_f1s)):.3f}  "
+        f"gap={overfit_gap:+.3f}"
     )
 
     # Final model fit on the full dataset
@@ -442,6 +451,8 @@ def train_single(
         "rskf_auc_std":      auc_std,
         "rskf_auc_ci_low":   float(ci_low),
         "rskf_auc_ci_high":  float(ci_high),
+        "rskf_train_auc_mean": train_auc_mean,
+        "rskf_overfit_gap":  overfit_gap,   # train_auc - test_auc; healthy < 0.05
         "rskf_f1_mean":      float(np.mean(fold_f1s)),
         "rskf_f1_std":       float(np.std(fold_f1s)),
         "rskf_acc_mean":     float(np.mean(fold_accs)),
